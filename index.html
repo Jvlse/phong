@@ -1,8 +1,7 @@
 <!DOCTYPE>
 <html xml:lang>
-    
     <head>
-        <title> Phong </title>
+        <title>Phong</title>
         <style>
             body {
                 display: flex;
@@ -27,8 +26,7 @@
         vec3 ObjectColor = vec3(1.0, 0.1, 0.1);
         vec3 LightColor = vec3(1.0, 1.0, 1.0);
 
-        void main(void) 
-        {
+        void main(void) {
             vec3 normal = -normalize((NormalMatrix * vec4(aVertexColor, 0.0)).xyz);
             colorVector = vec4(LightColor * ObjectColor * max(0.0, dot(normalize(LightDirection), normal)), 1.0);
             specularityVector = vec4(vec3(0.6, 0.6, 0.6) * pow(max(0.0, dot(-reflect(LightDirection, normal), vec3(0.0, 0.0, 1.0))), 1.0), 1.0);
@@ -65,20 +63,18 @@
                 var str = "";
                 var k = shaderScript.firstChild;
                 while (k) {
-                    if (k.nodeType == 3) {
+                    if (k.nodeType == 3)
                         str += k.textContent;
-                    }
                     k = k.nextSibling;
                 }
 
                 var shader;
-                if (shaderScript.type == "x-shader/x-fragment") {
+                if (shaderScript.type == "x-shader/x-fragment")
                     shader = gl.createShader(gl.FRAGMENT_SHADER);
-                } else if (shaderScript.type == "x-shader/x-vertex") {
+                else if (shaderScript.type == "x-shader/x-vertex")
                     shader = gl.createShader(gl.VERTEX_SHADER);
-                } else {
+                else
                     return null;
-                }
 
                 gl.shaderSource(shader, str);
                 gl.compileShader(shader);
