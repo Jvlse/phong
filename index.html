@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xml:lang>
+<html lang="en">
     <head>
         <title>Phong</title>
         <style>
@@ -15,34 +15,36 @@
                 justify-content: center;
             }
         </style>
-
         <script type="text/javascript" src="glmatrix-min.js"></script>
-
         <script id="shader-vs" type="shader/vertex">
-        attribute vec3 aVertexPosition, aVertexColor;
-        varying vec4 colorVector, specularityVector;
-        uniform mat4 MVMatrix, PMatrix, NormalMatrix;
-        vec3 LightDirection = vec3(0.5, 0.5, 1.0), ObjectColor = vec3(1.0, 0.1, 0.1), LightColor = vec3(1.0, 1.0, 1.0);
-
-        void main(void) {
-            vec3 normal = -normalize((NormalMatrix * vec4(aVertexColor, 0.0)).xyz);
-            colorVector = vec4(LightColor * ObjectColor * max(0.0, dot(normalize(LightDirection), normal)), 1.0);
-            specularityVector = vec4(vec3(0.6, 0.6, 0.6) * pow(max(0.0, dot(-reflect(LightDirection, normal), vec3(0.0, 0.0, 1.0))), 1.0), 1.0);
-            gl_Position =  PMatrix * MVMatrix * (vec4(aVertexPosition, 1)) + vec4(0,1,0,0);
-        }
+            attribute vec3 aVertexPosition;
+            attribute vec3 aVertexColor;
+            varying vec4 colorVector;
+            varying vec4 specularityVector;
+            uniform mat4 MVMatrix;
+            uniform mat4 PMatrix;
+            uniform mat4 NormalMatrix;
+            vec3 LightDirection = vec3(0.5, 0.5, 1.0);
+            vec3 ObjectColor = vec3(1.0, 0.1, 0.1);
+            vec3 LightColor = vec3(1.0, 1.0, 1.0);
+            
+            void main(void) {
+                vec3 normal = -normalize((NormalMatrix * vec4(aVertexColor, 0.0)).xyz);
+                colorVector = vec4(LightColor * ObjectColor * max(0.0, dot(normalize(LightDirection), normal)), 1.0);
+                specularityVector = vec4(vec3(0.6, 0.6, 0.6) * pow(max(0.0, dot(-reflect(LightDirection, normal), vec3(0.0, 0.0, 1.0))), 1.0), 1.0);
+                gl_Position = PMatrix * MVMatrix * vec4(aVertexPosition, 1.0) + vec4(0.0, 1.0, 0.0, 0.0);
+            }
         </script>
-
         <script id="shader-fs" type="shader/fragment">
-        precision mediump float;
-        varying vec4 colorVector, specularityVector;
-
-        void main(void) {
-            gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);
-        }
+            precision mediump float; // Precision qualifier for OpenGL ES
+            varying vec4 colorVector;
+            varying vec4 specularityVector;
+            
+            void main(void) {
+                gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);
+            }
         </script>
-
         <script type="text/javascript">
-
             var gl;
             function initGL(canvas) {
                 gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
@@ -50,105 +52,121 @@
                     alert("WebGL not supported.");
                 resizeCanvas();
             }
-
+            
             function resizeCanvas() {
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
                 gl.viewport(0, 0, canvas.width, canvas.height);
-            }  
-
+            }
+            
             function getShader(gl, id) {
                 var shaderScript = document.getElementById(id);
-
+                if (!shaderScript) return null;
+            
                 var str = "";
                 var k = shaderScript.firstChild;
                 while (k) {
-                    if (k.nodeType == 3)
-                        str += k.textContent;
+                    if (k.nodeType == 3) str += k.textContent;
                     k = k.nextSibling;
                 }
-
+            
                 var shader;
-                if (shaderScript.type == "shader/fragment")
+                if (shaderScript.type === "shader/fragment") {
                     shader = gl.createShader(gl.FRAGMENT_SHADER);
-                else if (shaderScript.type == "shader/vertex")
+                } else if (shaderScript.type === "shader/vertex") {
                     shader = gl.createShader(gl.VERTEX_SHADER);
-                else
+                } else {
                     return null;
-
+                }
+            
                 gl.shaderSource(shader, str);
                 gl.compileShader(shader);
-                
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+            
                 return shader;
             }
-
+            
             var shaderProgram;
             function initShaders() {
-                var fragmentShader = getShader(gl, "shader-fs"), vertexShader = getShader(gl, "shader-vs");
-
+                var fragmentShader = getShader(gl, "shader-fs");
+                var vertexShader = getShader(gl, "shader-vs");
+            
                 shaderProgram = gl.createProgram();
                 gl.attachShader(shaderProgram, vertexShader);
                 gl.attachShader(shaderProgram, fragmentShader);
                 gl.linkProgram(shaderProgram);
+            
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+                    return;
+                }
+            
                 gl.useProgram(shaderProgram);
-
-                gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));
-
+            
+                shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+                gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+            
                 shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
-                gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexColor"));
+                gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
             }
-
-            var mvMatrix = glMatrix.mat4.create(), pMatrix = glMatrix.mat4.create();
+            
+            var mvMatrix = glMatrix.mat4.create();
+            var pMatrix = glMatrix.mat4.create();
             function setUniforms() {
                 var normalMatrix = glMatrix.mat4.clone(mvMatrix);
                 glMatrix.mat4.invert(normalMatrix, normalMatrix);
                 glMatrix.mat4.transpose(normalMatrix, normalMatrix);
-                
+            
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "NormalMatrix"), false, normalMatrix);
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "PMatrix"), false, pMatrix);
                 gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "MVMatrix"), false, mvMatrix);
             }
-
+            
             var icosahedronVertexPositionBuffer, icosahedronColorBuffer, icosahedronCenterPosition = { x: 0, y: 0, z: 0 };
             function initBuffers() {
                 icosahedronVertexPositionBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
-                const X = 0.525731112119133606, Z = 0.850650808352039932;
+                const X = 0.525731112119133606;
+                const Z = 0.850650808352039932;
                 var vertices = [
-                    -X, 0.0, Z,     0.0, Z, X,      X, 0.0, Z,
-                    -X, 0.0, Z,     -Z, X, 0.0,     0.0, Z, X,
-                    -Z, X, 0.0,     0.0, Z, -X,     0.0, Z, X,
-                    0.0, Z, X,      0.0, Z, -X,     Z, X, 0.0,
-                    0.0, Z, X,      Z, X, 0.0,      X, 0.0, Z,
-                    Z, X, 0.0,      Z, -X, 0.0,     X, 0.0, Z,
-                    Z, X, 0.0,      X, 0.0, -Z,     Z, -X, 0.0,
-                    0.0, Z, -X,     X, 0.0, -Z,     Z, X, 0.0,
-                    0.0, Z, -X,     -X, 0.0, -Z,    X, 0.0, -Z,
-                    -X, 0.0, -Z,    0.0, -Z, -X,    X, 0.0, -Z,
-                    0.0, -Z, -X,    Z, -X, 0.0,     X, 0.0, -Z,
-                    0.0, -Z, -X,    0.0, -Z, X,     Z, -X, 0.0,
-                    0.0, -Z, -X,    -Z, -X, 0.0,    0.0, -Z, X,
-                    -Z, -X, 0.0,    -X, 0.0, Z,     0.0, -Z, X,
-                    -X, 0.0, Z,     X, 0.0, Z,      0.0, -Z, X,
-                    0.0, -Z, X,     X, 0.0, Z,      Z, -X, 0.0,
-                    -Z, X, 0.0,     -X, 0.0, Z,     -Z, -X, 0.0,
-                    -Z, X, 0.0,     -Z, -X, 0.0,    -X, 0.0, -Z,
-                    -Z, X, 0.0,     -X, 0.0, -Z,    0.0, Z, -X,
-                    0.0, -Z, -X,    -X, 0.0, -Z,    -Z, -X, 0.0,
-                ];
+                        -X, 0.0, Z,     0.0, Z, X,      X, 0.0, Z,
+                        -X, 0.0, Z,     -Z, X, 0.0,     0.0, Z, X,
+                        -Z, X, 0.0,     0.0, Z, -X,     0.0, Z, X,
+                        0.0, Z, X,      0.0, Z, -X,     Z, X, 0.0,
+                        0.0, Z, X,      Z, X, 0.0,      X, 0.0, Z,
+                        Z, X, 0.0,      Z, -X, 0.0,     X, 0.0, Z,
+                        Z, X, 0.0,      X, 0.0, -Z,     Z, -X, 0.0,
+                        0.0, Z, -X,     X, 0.0, -Z,     Z, X, 0.0,
+                        0.0, Z, -X,     -X, 0.0, -Z,    X, 0.0, -Z,
+                        -X, 0.0, -Z,    0.0, -Z, -X,    X, 0.0, -Z,
+                        0.0, -Z, -X,    Z, -X, 0.0,     X, 0.0, -Z,
+                        0.0, -Z, -X,    0.0, -Z, X,     Z, -X, 0.0,
+                        0.0, -Z, -X,    -Z, -X, 0.0,    0.0, -Z, X,
+                        -Z, -X, 0.0,    -X, 0.0, Z,     0.0, -Z, X,
+                        -X, 0.0, Z,     X, 0.0, Z,      0.0, -Z, X,
+                        0.0, -Z, X,     X, 0.0, Z,      Z, -X, 0.0,
+                        -Z, X, 0.0,     -X, 0.0, Z,     -Z, -X, 0.0,
+                        -Z, X, 0.0,     -Z, -X, 0.0,    -X, 0.0, -Z,
+                        -Z, X, 0.0,     -X, 0.0, -Z,    0.0, Z, -X,
+                        0.0, -Z, -X,    -X, 0.0, -Z,    -Z, -X, 0.0,
+                    ];
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
+            
                 icosahedronVertexPositionBuffer.itemSize = 3;
                 icosahedronVertexPositionBuffer.numItems = 60;
-
+            
                 determineCenterPosition(vertices);
                 icosahedronColorBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronColorBuffer);
-
+            
                 let colors = calculateNormVectors(vertices);
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
             }
-
+            
             function calculateNormVectors(vertices) {
                 let normVectors = [];
                 for (let i = 0; i < vertices.length; i += 9) {
@@ -158,20 +176,22 @@
                     let ex2 = vertices[i + 6] - vertices[i];
                     let ey2 = vertices[i + 7] - vertices[i + 1];
                     let ez2 = vertices[i + 8] - vertices[i + 2];
-
+            
                     let nx = ey1 * ez2 - ez1 * ey2;
                     let ny = ez1 * ex2 - ex1 * ez2;
                     let nz = ex1 * ey2 - ey1 * ex2;
-
+            
                     normVectors.push(nx, ny, nz);
                     normVectors.push(nx, ny, nz);
                     normVectors.push(nx, ny, nz);
                 }
                 return normVectors;
             }
-
+            
             function determineCenterPosition(vertices) {
-                let xCoordinates = [],  yCoordinates = [], zCoordinates = [];
+                let xCoordinates = [];
+                let yCoordinates = [];
+                let zCoordinates = [];
                 for (let i = 0; i < vertices.length; i += 3) {
                     xCoordinates.push(vertices[i]);
                     yCoordinates.push(vertices[i + 1]);
@@ -181,33 +201,33 @@
                 icosahedronCenterPosition.y = (Math.max(...yCoordinates) + Math.min(...yCoordinates)) / 2;
                 icosahedronCenterPosition.z = (Math.max(...zCoordinates) + Math.min(...zCoordinates)) / 2;
             }
-
+            
             var xShift = 0, yShift = 0, zShift = 0, thetaX = 0, thetaY = 0;
             function drawScene() {
                 var aspect = canvas.width / canvas.height;
                 glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), aspect, 0.1, 100.0);
                 glMatrix.mat4.identity(mvMatrix);
                 glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -15.0]);
-
-                thetaX = (customThetaX-thetaX) / 180 * Math.PI;
+            
+                thetaX = (customThetaX - thetaX) / 180 * Math.PI;
                 glMatrix.mat4.multiply(mvMatrix, mvMatrix,
                     [Math.cos(thetaX), 0, Math.sin(thetaX), 0,
-                     0, 1, 0, 0,
+                      0, 1, 0, 0,
                     -Math.sin(thetaX), 0, Math.cos(thetaX), 0,
-                     0, 0, 0, 1]);
-
-                thetaY = (customThetaY-thetaY) / 180 * Math.PI;
+                      0, 0, 0, 1]);
+            
+                thetaY = (customThetaY - thetaY) / 180 * Math.PI;
                 glMatrix.mat4.multiply(mvMatrix, mvMatrix,
                     [1, 0, 0, 0,
-                     0, Math.cos(thetaY), Math.sin(thetaY), 0,
-                     0, -Math.sin(thetaY), Math.cos(thetaY), 0,
-                     0, 0, 0, 1]);
-
+                      0, Math.cos(thetaY), Math.sin(thetaY), 0,
+                      0, -Math.sin(thetaY), Math.cos(thetaY), 0,
+                      0, 0, 0, 1]);
+            
                 glMatrix.mat4.multiply(mvMatrix, mvMatrix,
                     [1, 0, 0, 0,
-                     0, 1, 0, 0,
-                     0, 0, 1, 0,
-                     xShift, yShift, zShift, 1]);
+                      0, 1, 0, 0,
+                      0, 0, 1, 0,
+                      xShift, yShift, zShift, 1]);
             
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
                 gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, icosahedronVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -216,16 +236,16 @@
                 setUniforms();
                 gl.drawArrays(gl.TRIANGLES, 0, icosahedronVertexPositionBuffer.numItems);
             }
-
+            
             function webGLStart() {
                 var canvas = document.getElementById("canvas");
                 initGL(canvas);
                 initShaders();
                 initBuffers();
-
+            
                 gl.clearColor(0.0, 0.0, 1.0, 1.0);
                 gl.enable(gl.DEPTH_TEST);
-
+            
                 drawScene();
                 resizeCanvas();
             }
@@ -250,13 +270,13 @@
                 if (mousedown) {
                     customThetaX += (currentMousePos.x - lastMousePos.x) * (-0.1);
                     customThetaY += (currentMousePos.y - lastMousePos.y) * (-0.1);
-
+            
                     lastMousePos = currentMousePos;
                     requestAnimationFrame(drawScene);
                 }
             });
             document.addEventListener("touchmove", function (event) {
-                let currentTouchPos = { x: event.clientX, y: event.clientY };
+                let currentTouchPos = { x: event.touches[0].clientX, y: event.touches[0].clientY };
                 xShift = (-1) * icosahedronCenterPosition.x;
                 yShift = (-1) * icosahedronCenterPosition.y;
                 zShift = (-1) * icosahedronCenterPosition.z;
@@ -267,7 +287,7 @@
                     requestAnimationFrame(drawScene);
                 }
             });
-
+            
             document.addEventListener("mouseup", function (event) {
                 mousedown = false;
             });
