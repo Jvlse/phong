@@ -9,11 +9,10 @@
                 justify-content: center;
             }
         </style>
+
         <script type="text/javascript" src="glMatrix-min.js"></script>
 
         <script id="shader-vs" type="x-shader/x-vertex">
-        
-        
         attribute vec3 aVertexPosition;
         attribute vec3 aVertexColor;
 
@@ -38,7 +37,6 @@
         </script>
 
         <script id="shader-fs" type="x-shader/x-fragment">
-
         precision mediump float;
 
         varying vec4 colorVector;
@@ -47,7 +45,6 @@
         void main(void) {
             gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);    
         }
-
         </script>
 
         <script type="text/javascript">
@@ -131,7 +128,6 @@
             var icosahedronVertexPositionBuffer;
             var icosahedronColorBuffer;
             var icosahedronCenterPosition = { x: 0, y: 0, z: 0 };
-
             function initBuffers() {
                 icosahedronVertexPositionBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
@@ -192,7 +188,6 @@
                     normVectors.push(nx, ny, nz);
                     normVectors.push(nx, ny, nz);
                 }
-                console.log(normVectors);
                 return normVectors;
             }
 
