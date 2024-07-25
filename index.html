@@ -37,7 +37,7 @@
         varying vec4 colorVector, specularityVector;
 
         void main(void) {
-            gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);    
+            gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);
         }
         </script>
 
@@ -45,21 +45,17 @@
 
             var gl;
             function initGL(canvas) {
-                gl = canvas.getContext("experimental-webgl");
-                gl.viewportWidth = canvas.width;
-                gl.viewportHeight = canvas.height;
-                if (!gl) {
+                gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                if (!gl)
                     alert("WebGL not supported.");
-                }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas, false);
+                resizeCanvas();
             }
 
             function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-}  
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }  
 
             function getShader(gl, id) {
                 var shaderScript = document.getElementById(id);
@@ -231,6 +227,7 @@
                 gl.enable(gl.DEPTH_TEST);
 
                 drawScene();
+                resizeCanvas();
             }
             
             var customThetaX = 0, customThetaY = 0, lastMousePos = { x: 0, y: 0 }, mousedown = false, lastTouchPos = { x: 0, y: 0 }, touchstart = false;
@@ -277,6 +274,7 @@
             document.addEventListener("touchend", function (event) {
                 touchstart = false;
             });
+            window.addEventListener('resize', resizeCanvas);
         </script>
     </head>
     <body onload="webGLStart();">
