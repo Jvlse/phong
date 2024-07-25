@@ -1,4 +1,4 @@
-<!DOCTYPE>
+<!DOCTYPE html>
 <html xml:lang>
     <head>
         <title>Phong</title>
@@ -41,6 +41,9 @@
                 gl = canvas.getContext("experimental-webgl");
                 gl.viewportWidth = canvas.width;
                 gl.viewportHeight = canvas.height;
+                if (!gl) {
+                    alert("WebGL not supported.");
+                }
             }
 
             function getShader(gl, id) {
@@ -125,7 +128,7 @@
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
                 icosahedronVertexPositionBuffer.itemSize = 3;
-                icosahedronVertexPositionBuffer.numItems = 84;
+                icosahedronVertexPositionBuffer.numItems = 60;
 
                 determineCenterPosition(vertices);
                 icosahedronColorBuffer = gl.createBuffer();
