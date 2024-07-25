@@ -3,9 +3,14 @@
     <head>
         <title>Phong</title>
         <style>
+            canvas {
+                display: block;
+                width: 100vw;
+                height: 100vh;
+            }
             body {
-                width: 100%;
-                height: 100%;
+                margin: 0;
+                overflow: hidden;
                 display: flex;
                 justify-content: center;
             }
@@ -46,7 +51,15 @@
                 if (!gl) {
                     alert("WebGL not supported.");
                 }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas, false);
             }
+
+            function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+}  
 
             function getShader(gl, id) {
                 var shaderScript = document.getElementById(id);
@@ -175,7 +188,8 @@
 
             var xShift = 0, yShift = 0, zShift = 0, thetaX = 0, thetaY = 0;
             function drawScene() {
-                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+                var aspect = canvas.width / canvas.height;
+                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), aspect, 0.1, 100.0);
                 glMatrix.mat4.identity(mvMatrix);
                 glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -15.0]);
 
@@ -218,12 +232,17 @@
 
                 drawScene();
             }
-
-            var customThetaX = 0, customThetaY = 0, lastMousePos = { x: 0, y: 0 }, mousedown = false;
+            
+            var customThetaX = 0, customThetaY = 0, lastMousePos = { x: 0, y: 0 }, mousedown = false, lastTouchPos = { x: 0, y: 0 }, touchstart = false;
             document.addEventListener("mousedown", function (event) {
                 mousedown = true;
                 lastMousePos.x = event.clientX;
                 lastMousePos.y = event.clientY;
+            });
+            document.addEventListener("touchstart", function (event) {
+                touchstart = true;
+                lastTouchPos.x = event.touches[0].clientX;
+                lastTouchPos.y = event.touches[0].clientY;
             });
             
             document.addEventListener("mousemove", function (event) {
@@ -239,13 +258,28 @@
                     requestAnimationFrame(drawScene);
                 }
             });
+            document.addEventListener("touchmove", function (event) {
+                let currentTouchPos = { x: event.clientX, y: event.clientY };
+                xShift = (-1) * icosahedronCenterPosition.x;
+                yShift = (-1) * icosahedronCenterPosition.y;
+                zShift = (-1) * icosahedronCenterPosition.z;
+                if (touchstart) {
+                    customThetaX += (currentTouchPos.x - lastTouchPos.x) * (-0.1);
+                    customThetaY += (currentTouchPos.y - lastTouchPos.y) * (-0.1);
+                    lastTouchPos = currentTouchPos;
+                    requestAnimationFrame(drawScene);
+                }
+            });
 
             document.addEventListener("mouseup", function (event) {
                 mousedown = false;
             });
+            document.addEventListener("touchend", function (event) {
+                touchstart = false;
+            });
         </script>
     </head>
     <body onload="webGLStart();">
-        <canvas id="canvas" width="1080" height="1080"></canvas>
+        <canvas id="canvas" width="1920" height="1080"></canvas>
     </body>
 </html>
