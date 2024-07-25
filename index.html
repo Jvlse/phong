@@ -12,19 +12,10 @@
         <script type="text/javascript" src="glmatrix-min.js"></script>
 
         <script id="shader-vs" type="x-shader/x-vertex">
-        attribute vec3 aVertexPosition;
-        attribute vec3 aVertexColor;
-
-        varying vec4 colorVector;
-        varying vec4 specularityVector;
-
-        uniform mat4 MVMatrix; 
-        uniform mat4 PMatrix;
-        uniform mat4 NormalMatrix;
-
-        vec3 LightDirection = vec3(0.5, 0.5, 1.0);
-        vec3 ObjectColor = vec3(1.0, 0.1, 0.1);
-        vec3 LightColor = vec3(1.0, 1.0, 1.0);
+        attribute vec3 aVertexPosition, aVertexColor;
+        varying vec4 colorVector, specularityVector;
+        uniform mat4 MVMatrix, PMatrix, NormalMatrix;
+        vec3 LightDirection = vec3(0.5, 0.5, 1.0), ObjectColor = vec3(1.0, 0.1, 0.1), LightColor = vec3(1.0, 1.0, 1.0);
 
         void main(void) {
             vec3 normal = -normalize((NormalMatrix * vec4(aVertexColor, 0.0)).xyz);
@@ -36,9 +27,7 @@
 
         <script id="shader-fs" type="x-shader/x-fragment">
         precision mediump float;
-
-        varying vec4 colorVector;
-        varying vec4 specularityVector;
+        varying vec4 colorVector, specularityVector;
 
         void main(void) {
             gl_FragColor = (1.0 * colorVector) + (1.0 * specularityVector);    
@@ -56,9 +45,6 @@
 
             function getShader(gl, id) {
                 var shaderScript = document.getElementById(id);
-                if (!shaderScript) {
-                    return null;
-                }
 
                 var str = "";
                 var k = shaderScript.firstChild;
@@ -78,19 +64,13 @@
 
                 gl.shaderSource(shader, str);
                 gl.compileShader(shader);
-
-                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                    alert(gl.getShaderInfoLog(shader));
-                    return null;
-                }
-
+                
                 return shader;
             }
 
             var shaderProgram;
             function initShaders() {
-                var fragmentShader = getShader(gl, "shader-fs");
-                var vertexShader = getShader(gl, "shader-vs");
+                var fragmentShader = getShader(gl, "shader-fs"), vertexShader = getShader(gl, "shader-vs");
 
                 shaderProgram = gl.createProgram();
                 gl.attachShader(shaderProgram, vertexShader);
@@ -98,38 +78,28 @@
                 gl.linkProgram(shaderProgram);
                 gl.useProgram(shaderProgram);
 
-                shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-                gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+                gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));
 
                 shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
-                gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
-
-                shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "PMatrix");
-                shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "MVMatrix");
-                shaderProgram.normalMatrixUnifrom = gl.getUniformLocation(shaderProgram, "NormalMatrix");
+                gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexColor"));
             }
 
-            var mvMatrix = glMatrix.mat4.create();
-            var pMatrix = glMatrix.mat4.create();
+            var mvMatrix = glMatrix.mat4.create(), pMatrix = glMatrix.mat4.create();
             function setUniforms() {
                 var normalMatrix = glMatrix.mat4.clone(mvMatrix);
                 glMatrix.mat4.invert(normalMatrix, normalMatrix);
                 glMatrix.mat4.transpose(normalMatrix, normalMatrix);
                 
-                gl.uniformMatrix4fv(shaderProgram.normalMatrixUnifrom, false, normalMatrix);
-                gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-                gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+                gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "NormalMatrix"), false, normalMatrix);
+                gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "PMatrix"), false, pMatrix);
+                gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "MVMatrix"), false, mvMatrix);
             }
 
-            var icosahedronVertexPositionBuffer;
-            var icosahedronColorBuffer;
-            var icosahedronCenterPosition = { x: 0, y: 0, z: 0 };
+            var icosahedronVertexPositionBuffer, icosahedronColorBuffer, icosahedronCenterPosition = { x: 0, y: 0, z: 0 };
             function initBuffers() {
                 icosahedronVertexPositionBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
-                const X = 0.525731112119133606
-                const Z = 0.850650808352039932
-            
+                const X = 0.525731112119133606, Z = 0.850650808352039932;
                 var vertices = [
                     -X, 0.0, Z,     0.0, Z, X,      X, 0.0, Z,
                     -X, 0.0, Z,     -Z, X, 0.0,     0.0, Z, X,
@@ -158,11 +128,10 @@
                 icosahedronVertexPositionBuffer.numItems = 84;
 
                 determineCenterPosition(vertices);
-
                 icosahedronColorBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronColorBuffer);
+
                 let colors = calculateNormVectors(vertices);
-            
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
             }
 
@@ -188,44 +157,31 @@
             }
 
             function determineCenterPosition(vertices) {
-                let xCoordinates = [];
-                let yCoordinates = [];
-                let zCoordinates = [];
+                let xCoordinates = [],  yCoordinates = [], zCoordinates = [];
                 for (let i = 0; i < vertices.length; i += 3) {
                     xCoordinates.push(vertices[i]);
                     yCoordinates.push(vertices[i + 1]);
                     zCoordinates.push(vertices[i + 2]);
                 }
-
-                let xMax = Math.max(...xCoordinates);
-                let yMax = Math.max(...yCoordinates);
-                let zMax = Math.max(...zCoordinates);
-
-                let xMin = Math.min(...xCoordinates);
-                let yMin = Math.min(...yCoordinates);
-                let zMin = Math.min(...zCoordinates);
-
-                icosahedronCenterPosition.x = (xMax + xMin) / 2;
-                icosahedronCenterPosition.y = (yMax + yMin) / 2;
-                icosahedronCenterPosition.z = (zMax + zMin) / 2;
+                icosahedronCenterPosition.x = (Math.max(...xCoordinates) + Math.min(...xCoordinates)) / 2;
+                icosahedronCenterPosition.y = (Math.max(...yCoordinates) + Math.min(...yCoordinates)) / 2;
+                icosahedronCenterPosition.z = (Math.max(...zCoordinates) + Math.min(...zCoordinates)) / 2;
             }
 
-            var xShift = 0;
-            var yShift = 0;
-            var zShift = 0;
+            var xShift = 0, yShift = 0, zShift = 0, thetaX = 0, thetaY = 0;
             function drawScene() {
-                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(50), gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
                 glMatrix.mat4.identity(mvMatrix);
-                glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.1, 0.0, -5.0]);
+                glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -15.0]);
 
-                let thetaX = customThetaX / 180 * Math.PI;
+                thetaX = (customThetaX-thetaX) / 180 * Math.PI;
                 glMatrix.mat4.multiply(mvMatrix, mvMatrix,
                     [Math.cos(thetaX), 0, Math.sin(thetaX), 0,
                      0, 1, 0, 0,
                     -Math.sin(thetaX), 0, Math.cos(thetaX), 0,
                      0, 0, 0, 1]);
 
-                let thetaY = customThetaY / 180 * Math.PI;
+                thetaY = (customThetaY-thetaY) / 180 * Math.PI;
                 glMatrix.mat4.multiply(mvMatrix, mvMatrix,
                     [1, 0, 0, 0,
                      0, Math.cos(thetaY), Math.sin(thetaY), 0,
@@ -240,13 +196,9 @@
             
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
                 gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, icosahedronVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronColorBuffer);
                 gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, icosahedronVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
                 setUniforms();
-
-                gl.uniform4f(shaderProgram.color, 1.0, 0.0, 1.0, 1.0);
                 gl.drawArrays(gl.TRIANGLES, 0, icosahedronVertexPositionBuffer.numItems);
             }
 
@@ -262,11 +214,7 @@
                 drawScene();
             }
 
-            var customThetaX = 0;
-            var customThetaY = 0;
-            let lastMousePos = { x: 0, y: 0 };
-
-            let mousedown = false;
+            var customThetaX = 0, customThetaY = 0, lastMousePos = { x: 0, y: 0 }, mousedown = false;
             document.addEventListener("mousedown", function (event) {
                 mousedown = true;
                 lastMousePos.x = event.clientX;
@@ -274,16 +222,13 @@
             });
             
             document.addEventListener("mousemove", function (event) {
-                let currentMousePos = {
-                    x: event.clientX,
-                    y: event.clientY
-                };
+                let currentMousePos = { x: event.clientX, y: event.clientY };
                 xShift = (-1) * icosahedronCenterPosition.x;
                 yShift = (-1) * icosahedronCenterPosition.y;
                 zShift = (-1) * icosahedronCenterPosition.z;
                 if (mousedown) {
-                    customThetaX += (currentMousePos.x - lastMousePos.x) * (-1);
-                    customThetaY += (currentMousePos.y - lastMousePos.y) * (-1);
+                    customThetaX += (currentMousePos.x - lastMousePos.x) * (-0.1);
+                    customThetaY += (currentMousePos.y - lastMousePos.y) * (-0.1);
 
                     lastMousePos = currentMousePos;
                     requestAnimationFrame(drawScene);
@@ -295,7 +240,6 @@
             });
         </script>
     </head>
-
     <body onload="webGLStart();">
         <canvas id="canvas" width="1080" height="1080"></canvas>
     </body>
