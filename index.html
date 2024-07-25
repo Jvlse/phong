@@ -269,7 +269,7 @@
                 zShift = (-1) * icosahedronCenterPosition.z;
                 if (mousedown) {
                     customThetaX += (currentMousePos.x - lastMousePos.x) * (-0.1);
-                    customThetaY += (currentMousePos.y - lastMousePos.y) * (-0.1);
+                    customThetaY += (currentMousePos.y - lastMousePos.y) * (0.1);
             
                     lastMousePos = currentMousePos;
                     requestAnimationFrame(drawScene);
