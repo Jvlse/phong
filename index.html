@@ -50,13 +50,13 @@
                 gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
                 if (!gl)
                     alert("WebGL not supported.");
-                resizeCanvas();
             }
             
             function resizeCanvas() {
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
                 gl.viewport(0, 0, canvas.width, canvas.height);
+                drawScene();
             }
             
             function getShader(gl, id) {
@@ -164,6 +164,7 @@
             
                 let colors = calculateNormVectors(vertices);
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+                resizeCanvas();
             }
             
             function calculateNormVectors(vertices) {
@@ -223,7 +224,6 @@
                 gl.enable(gl.DEPTH_TEST);
             
                 drawScene();
-                resizeCanvas();
             }
 
             function adjustGLMatrix() {
