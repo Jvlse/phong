@@ -279,8 +279,8 @@
                 yShift = (-1) * icosahedronCenterPosition.y;
                 zShift = (-1) * icosahedronCenterPosition.z;
                 if (touchstart) {
-                    customThetaX += (currentTouchPos.x - lastTouchPos.x) * (-0.5);
-                    customThetaY += (currentTouchPos.y - lastTouchPos.y) * (0.5);
+                    customThetaX += (currentTouchPos.x - lastTouchPos.x) * (-0.3);
+                    customThetaY += (currentTouchPos.y - lastTouchPos.y) * (0.3);
                     lastTouchPos = currentTouchPos;
                     requestAnimationFrame(drawScene);
                 }
