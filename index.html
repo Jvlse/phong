@@ -203,31 +203,8 @@
             
             var xShift = 0, yShift = 0, zShift = 0, thetaX = 0, thetaY = 0;
             function drawScene() {
-                var aspect = canvas.width / canvas.height;
-                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), aspect, 0.1, 100.0);
-                glMatrix.mat4.identity(mvMatrix);
-                glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, 0.0, -15.0]);
-            
-                thetaX = (customThetaX - thetaX) / 180 * Math.PI;
-                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
-                    [Math.cos(thetaX), 0, Math.sin(thetaX), 0,
-                      0, 1, 0, 0,
-                    -Math.sin(thetaX), 0, Math.cos(thetaX), 0,
-                      0, 0, 0, 1]);
-            
-                thetaY = (customThetaY - thetaY) / 180 * Math.PI;
-                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
-                    [1, 0, 0, 0,
-                      0, Math.cos(thetaY), Math.sin(thetaY), 0,
-                      0, -Math.sin(thetaY), Math.cos(thetaY), 0,
-                      0, 0, 0, 1]);
-            
-                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
-                    [1, 0, 0, 0,
-                      0, 1, 0, 0,
-                      0, 0, 1, 0,
-                      xShift, yShift, zShift, 1]);
-            
+                adjustGLMatrix();
+
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronVertexPositionBuffer);
                 gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, icosahedronVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
                 gl.bindBuffer(gl.ARRAY_BUFFER, icosahedronColorBuffer);
@@ -247,6 +224,37 @@
             
                 drawScene();
                 resizeCanvas();
+            }
+
+            function adjustGLMatrix() {
+                var aspect = canvas.width / canvas.height;
+                glMatrix.mat4.perspective(pMatrix, glMatrix.glMatrix.toRadian(10), aspect, 1, 100.0);
+                glMatrix.mat4.identity(mvMatrix);
+
+                if(canvas.height > canvas.width)
+                    glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, -0.1, -13/(canvas.width / canvas.height)]);
+                else
+                    glMatrix.mat4.translate(mvMatrix, mvMatrix, [0.0, -0.1, -13/(canvas.height*aspect / canvas.width)]);
+
+                thetaX = (customThetaX - thetaX) / 180 * Math.PI;
+                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
+                    [Math.cos(thetaX), 0, Math.sin(thetaX), 0,
+                     0, 1, 0, 0,
+                    -Math.sin(thetaX), 0, Math.cos(thetaX), 0,
+                     0, 0, 0, 1]);
+            
+                thetaY = (customThetaY - thetaY) / 180 * Math.PI;
+                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
+                    [1, 0, 0, 0,
+                     0, Math.cos(thetaY), Math.sin(thetaY), 0,
+                     0, -Math.sin(thetaY), Math.cos(thetaY), 0,
+                     0, 0, 0, 1]);
+            
+                glMatrix.mat4.multiply(mvMatrix, mvMatrix,
+                    [1, 0, 0, 0,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     xShift, yShift, zShift, 1]);
             }
             
             var customThetaX = 0, customThetaY = 0, lastMousePos = { x: 0, y: 0 }, mousedown = false, lastTouchPos = { x: 0, y: 0 }, touchstart = false;
@@ -297,6 +305,6 @@
         </script>
     </head>
     <body onload="webGLStart();">
-        <canvas id="canvas" width="1920" height="1080"></canvas>
+        <canvas id="canvas" width="1080" height="1080"></canvas>
     </body>
 </html>
